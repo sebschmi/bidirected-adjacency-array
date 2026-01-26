@@ -1,6 +1,10 @@
 [package]
 name = "bidirected-adjacency-array"
 version = "0.1.0"
+authors = ["Sebastian Schmidt <sebastian.schmidt@helsinki.fi>"]
+license = "BSD-2-Clause"
+repository = "https://github.com/sebschmi/bidirected-adjacency-array"
+
 edition = "2024"
 
 [dependencies]
