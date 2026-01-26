@@ -1,5 +1,6 @@
 [package]
 name = "bidirected-adjacency-array"
+description = "Represent a bidirected graph via an adjacency array."
 version = "0.1.0"
 authors = ["Sebastian Schmidt <sebastian.schmidt@helsinki.fi>"]
 license = "BSD-2-Clause"
