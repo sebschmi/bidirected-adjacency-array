@@ -9,3 +9,8 @@ repository = "https://github.com/sebschmi/bidirected-adjacency-array"
 edition = "2024"
 
 [dependencies]
+num-traits = "0.2.19"
+optional-numeric-index = "0.3.0"
+tagged-vec = "0.3.6"
+thiserror = "2.0.18"
+log = "0.4.29"
