@@ -183,6 +183,19 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
         self.edge_data.iter_indices()
     }
 
+    pub fn iter_successors(
+        &self,
+        node: DirectedNodeIndex<IndexType>,
+    ) -> impl Iterator<Item = DirectedNodeIndex<IndexType>> {
+        let start = self.node_array[node];
+        let end = self.node_array[node.add(DirectedNodeIndex::from_usize(1))];
+        self.edge_array
+            .iter_values()
+            .take(end.into_usize())
+            .skip(start.into_usize())
+            .copied()
+    }
+
     pub fn node_data(&self, node: NodeIndex<IndexType>) -> &NodeData {
         &self.node_data[node]
     }

@@ -36,11 +36,15 @@ impl<IndexType: GraphIndexInteger> DirectedNodeIndex<IndexType> {
     pub fn is_reverse(self) -> bool {
         !self.is_forward()
     }
+
+    pub(crate) fn add(self, other: DirectedNodeIndex<IndexType>) -> DirectedNodeIndex<IndexType> {
+        Self::new(self.0 + other.0)
+    }
 }
 
 impl<IndexType: GraphIndexInteger> DirectedEdgeIndex<IndexType> {
     pub(crate) fn zero() -> Self {
-        DirectedEdgeIndex(0u8.into())
+        Self::new(0u8.into())
     }
 
     pub(crate) fn increment(&mut self) {
@@ -52,6 +56,6 @@ impl<IndexType: GraphIndexInteger> DirectedEdgeIndex<IndexType> {
     }
 
     pub(crate) fn add(self, other: DirectedEdgeIndex<IndexType>) -> DirectedEdgeIndex<IndexType> {
-        DirectedEdgeIndex(self.0 + other.0)
+        Self::new(self.0 + other.0)
     }
 }
