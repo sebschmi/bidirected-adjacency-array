@@ -36,9 +36,9 @@ dependencies = [
 
 [[package]]
 name = "optional-numeric-index"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de7d623711161fd4505a15b2f85e12fbc0003afdafce26eac93ad075182f93d7"
+checksum = "cbd904b2723a0239761861bd366f97f91c67dfc6699a050b6b56f982b8f9746d"
 dependencies = [
  "num-traits",
 ]
@@ -74,9 +74,9 @@ dependencies = [
 
 [[package]]
 name = "tagged-vec"
-version = "0.3.6"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7aaeb1a61db84ad2bfac1da3920289b4cddcb93957313993a3bc1c764925e96"
+checksum = "f805dc4a96393fe52676e29c3e9bbde5c823df822b36e3f04009615ae0b1d56b"
 
 [[package]]
 name = "thiserror"

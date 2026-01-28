@@ -12,6 +12,19 @@ implement_generic_index!(pub DirectedNodeIndex, pub OptionalDirectedNodeIndex);
 implement_generic_index!(pub DirectedEdgeIndex, pub OptionalDirectedEdgeIndex);
 
 impl<IndexType: GraphIndexInteger> DirectedNodeIndex<IndexType> {
+    pub fn from_bidirected(bidirected: NodeIndex<IndexType>, forward: bool) -> Self {
+        let base = bidirected.0 * 2u8.into();
+        if forward {
+            DirectedNodeIndex(base)
+        } else {
+            DirectedNodeIndex(base + 1u8.into())
+        }
+    }
+
+    pub fn into_bidirected(self) -> NodeIndex<IndexType> {
+        NodeIndex(self.0 / 2u8.into())
+    }
+
     pub fn invert(self) -> Self {
         DirectedNodeIndex(self.0 ^ 1u8.into())
     }
@@ -23,8 +36,22 @@ impl<IndexType: GraphIndexInteger> DirectedNodeIndex<IndexType> {
     pub fn is_reverse(self) -> bool {
         !self.is_forward()
     }
+}
 
-    pub fn into_bidirected(self) -> NodeIndex<IndexType> {
-        NodeIndex(self.0 / 2u8.into())
+impl<IndexType: GraphIndexInteger> DirectedEdgeIndex<IndexType> {
+    pub(crate) fn zero() -> Self {
+        DirectedEdgeIndex(0u8.into())
+    }
+
+    pub(crate) fn increment(&mut self) {
+        *self = Self::new(self.0 + 1u8.into());
+    }
+
+    pub(crate) fn decrement(&mut self) {
+        *self = Self::new(self.0 - 1u8.into());
+    }
+
+    pub(crate) fn add(self, other: DirectedEdgeIndex<IndexType>) -> DirectedEdgeIndex<IndexType> {
+        DirectedEdgeIndex(self.0 + other.0)
     }
 }

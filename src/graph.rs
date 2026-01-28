@@ -1,3 +1,5 @@
+use std::iter;
+
 use tagged_vec::TaggedVec;
 
 use crate::index::{
@@ -10,6 +12,8 @@ pub struct BidirectedAdjacencyArray<IndexType, NodeData, EdgeData> {
     ///
     /// Each bidirected node is represented by two consecutive directed nodes.
     /// The forward side is identified by [`DirectedNodeIndex::is_forward`].
+    ///
+    /// The last element is a sentinel value to simplify edge list iteration.
     node_array: TaggedVec<DirectedNodeIndex<IndexType>, DirectedEdgeIndex<IndexType>>,
 
     /// The edge lists for all directed nodes.
@@ -39,6 +43,7 @@ pub struct BidirectedAdjacencyArray<IndexType, NodeData, EdgeData> {
     edge_data: TaggedVec<EdgeIndex<IndexType>, BidirectedEdgeData<IndexType, EdgeData>>,
 }
 
+#[derive(Clone, Copy)]
 struct EdgeDataKey<IndexType> {
     inverse: DirectedEdgeIndex<IndexType>,
     data_index: OptionalEdgeIndex<IndexType>,
@@ -76,17 +81,89 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
         nodes: TaggedVec<NodeIndex<IndexType>, NodeData>,
         edges: TaggedVec<EdgeIndex<IndexType>, BidirectedEdge<IndexType, EdgeData>>,
     ) -> Self {
-        let mut node_array =
-            TaggedVec::<DirectedNodeIndex<IndexType>, DirectedEdgeIndex<IndexType>>::new();
-        let mut edge_array =
-            TaggedVec::<DirectedEdgeIndex<IndexType>, DirectedNodeIndex<IndexType>>::new();
+        let mut node_array = TaggedVec::from_iter(iter::repeat_n(
+            DirectedEdgeIndex::from_usize(0),
+            nodes.len() * 2 + 1,
+        ));
+
+        // Count the number of outgoing edges for each directed node.
+        for edge in edges.iter_values() {
+            let from_directed = DirectedNodeIndex::from_bidirected(edge.from, edge.from_forward);
+            node_array[from_directed].increment();
+        }
+
+        // Convert counts to edge list limits by computing the prefix sum.
+        let directed_edge_count =
+            node_array
+                .iter_values_mut()
+                .fold(DirectedEdgeIndex::zero(), |sum, element| {
+                    let sum = sum.add(*element);
+                    *element = sum;
+                    sum
+                });
+        assert_eq!(
+            directed_edge_count,
+            node_array.iter_values().last().copied().unwrap(),
+        );
+
+        // Create edge data structures.
+        let mut edge_array = TaggedVec::from_iter(iter::repeat_n(
+            DirectedNodeIndex::from_usize(0),
+            directed_edge_count.into_usize(),
+        ));
+        let mut edge_data_keys = TaggedVec::from_iter(iter::repeat_n(
+            EdgeDataKey {
+                inverse: DirectedEdgeIndex::zero(),
+                data_index: OptionalEdgeIndex::new_none(),
+            },
+            directed_edge_count.into_usize(),
+        ));
+        let mut edge_data = TaggedVec::new();
+
+        // Now add edges by counting down the edge list limits.
+        // Afterwards, the node array will contain the correct edge list offsets.
+        for (edge_index, edge) in edges.into_iter() {
+            let from_directed_forward =
+                DirectedNodeIndex::from_bidirected(edge.from, edge.from_forward);
+            let to_directed_forward = DirectedNodeIndex::from_bidirected(edge.to, edge.to_forward);
+            let edge_index_forward = {
+                node_array[from_directed_forward].decrement();
+                node_array[from_directed_forward]
+            };
+
+            let from_directed_reverse = to_directed_forward.invert();
+            let to_directed_reverse = from_directed_forward.invert();
+            let edge_index_reverse = {
+                node_array[from_directed_reverse].decrement();
+                node_array[from_directed_reverse]
+            };
+
+            edge_array[edge_index_forward] = to_directed_forward;
+            edge_array[edge_index_reverse] = to_directed_reverse;
+
+            edge_data_keys[edge_index_forward] = EdgeDataKey {
+                inverse: edge_index_reverse,
+                data_index: edge_index.into(),
+            };
+            edge_data_keys[edge_index_reverse] = EdgeDataKey {
+                inverse: edge_index_forward,
+                data_index: OptionalEdgeIndex::new_none(),
+            };
+
+            let data_index = edge_data.push(BidirectedEdgeData {
+                forward: edge_index_forward,
+                reverse: edge_index_reverse,
+                data: edge.data,
+            });
+            assert_eq!(edge_index, data_index);
+        }
 
         Self {
             node_array,
             edge_array,
             node_data: nodes,
-            edge_data_keys: todo!(),
-            edge_data: todo!(),
+            edge_data_keys,
+            edge_data,
         }
     }
 
