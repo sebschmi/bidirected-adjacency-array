@@ -53,10 +53,14 @@ fn test_write_read_triangle() {
 
     let mut buffer = Vec::new();
     write_gfa1(&expected_graph, &mut buffer).unwrap();
+    let actual_gfa = std::str::from_utf8(&buffer).unwrap().trim();
     println!("GFA:\n{}", std::str::from_utf8(&buffer).unwrap());
     let actual_graph = read_gfa1::<u16>(&mut buffer.as_slice()).unwrap();
 
+    let expected_gfa = "H\tVN:Z:1.0\nS\tN0\t000\nS\tN1\t111\nS\tN2\t222\nL\tN0\t+\tN1\t+\t0M\nL\tN1\t+\tN2\t+\t1M\nL\tN2\t+\tN0\t+\t2M";
+
     expected_graph.expect_equal(&actual_graph);
+    assert_eq!(expected_gfa, actual_gfa);
 }
 
 #[test]
