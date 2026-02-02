@@ -3,15 +3,15 @@ use std::{
     hash::Hash,
 };
 
-use num_traits::PrimInt;
+use num_traits::{Bounded, PrimInt};
 use optional_numeric_index::implement_generic_index;
 
 pub trait GraphIndexInteger:
-    PrimInt + Hash + Debug + Display + From<u8> + TryFrom<usize> + TryInto<usize>
+    PrimInt + Bounded + Hash + Debug + Display + From<u8> + TryFrom<usize> + TryInto<usize>
 {
 }
 
-impl<T: PrimInt + Hash + Debug + Display + From<u8> + TryFrom<usize> + TryInto<usize>>
+impl<T: PrimInt + Bounded + Hash + Debug + Display + From<u8> + TryFrom<usize> + TryInto<usize>>
     GraphIndexInteger for T
 {
 }
