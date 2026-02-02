@@ -43,43 +43,43 @@ fn test_path_construction() {
 
     assert_eq!(
         graph
-            .iter_successors(0.into())
-            .map(|(_, node_index)| node_index)
+            .iter_outgoing_edges(0.into())
+            .map(|edge| edge.to())
             .collect::<Vec<_>>(),
         vec![(2.into())]
     );
     assert_eq!(
         graph
-            .iter_successors(1.into())
-            .map(|(_, node_index)| node_index)
+            .iter_outgoing_edges(1.into())
+            .map(|edge| edge.to())
             .collect::<Vec<_>>(),
         vec![]
     );
     assert_eq!(
         graph
-            .iter_successors(2.into())
-            .map(|(_, node_index)| node_index)
+            .iter_outgoing_edges(2.into())
+            .map(|edge| edge.to())
             .collect::<Vec<_>>(),
         vec![(4.into())]
     );
     assert_eq!(
         graph
-            .iter_successors(3.into())
-            .map(|(_, node_index)| node_index)
+            .iter_outgoing_edges(3.into())
+            .map(|edge| edge.to())
             .collect::<Vec<_>>(),
         vec![(1.into())]
     );
     assert_eq!(
         graph
-            .iter_successors(4.into())
-            .map(|(_, node_index)| node_index)
+            .iter_outgoing_edges(4.into())
+            .map(|edge| edge.to())
             .collect::<Vec<_>>(),
         vec![]
     );
     assert_eq!(
         graph
-            .iter_successors(5.into())
-            .map(|(_, node_index)| node_index)
+            .iter_outgoing_edges(5.into())
+            .map(|edge| edge.to())
             .collect::<Vec<_>>(),
         vec![(3.into())]
     );

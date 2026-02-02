@@ -61,9 +61,9 @@ dependencies = [
 
 [[package]]
 name = "optional-numeric-index"
-version = "0.3.1"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cbd904b2723a0239761861bd366f97f91c67dfc6699a050b6b56f982b8f9746d"
+checksum = "493b49784a478a9073688afa9023972a3452639b0e842fcd41b0308b1de78353"
 dependencies = [
  "num-traits",
 ]

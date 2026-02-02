@@ -60,14 +60,23 @@ struct BidirectedEdgeData<IndexType, EdgeData> {
     data: EdgeData,
 }
 
-pub struct DirectedEdgeDataView<'a, EdgeData> {
-    forward: bool,
+pub struct DirectedEdge<IndexType> {
+    from: DirectedNodeIndex<IndexType>,
+    to: DirectedNodeIndex<IndexType>,
+    index: DirectedEdgeIndex<IndexType>,
+}
+
+pub struct DirectedEdgeDataView<'a, IndexType, EdgeData> {
+    is_forward: bool,
+    edge: EdgeIndex<IndexType>,
     data: &'a EdgeData,
 }
 
 pub struct EdgeView<'a, IndexType, EdgeData> {
     from: DirectedNodeIndex<IndexType>,
     to: DirectedNodeIndex<IndexType>,
+    forward: DirectedEdgeIndex<IndexType>,
+    reverse: DirectedEdgeIndex<IndexType>,
     data: &'a EdgeData,
 }
 
@@ -195,17 +204,44 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
         self.edge_data.iter_indices()
     }
 
-    pub fn iter_successors(
+    pub fn iter_outgoing_edges(
         &self,
         node: DirectedNodeIndex<IndexType>,
-    ) -> impl Iterator<Item = (DirectedEdgeIndex<IndexType>, DirectedNodeIndex<IndexType>)> {
+    ) -> impl Iterator<Item = DirectedEdge<IndexType>> {
         let start = self.node_array[node];
         let end = self.node_array[node.add(DirectedNodeIndex::from_usize(1))];
         self.edge_array
             .iter()
             .take(end.into_usize())
             .skip(start.into_usize())
-            .map(|(edge_index, &to_node)| (edge_index, to_node))
+            .map(move |(edge_index, &to_node)| DirectedEdge {
+                from: node,
+                to: to_node,
+                index: edge_index,
+            })
+    }
+
+    /// Iterate over the bidirected edges incident to the given bidirected node.
+    pub fn iter_incident_edges(
+        &self,
+        node: NodeIndex<IndexType>,
+    ) -> impl Iterator<Item = EdgeIndex<IndexType>> {
+        let forward_node = DirectedNodeIndex::from_bidirected(node, true);
+        let reverse_node = DirectedNodeIndex::from_bidirected(node, false);
+        self.iter_outgoing_edges(forward_node)
+            .chain(self.iter_outgoing_edges(reverse_node))
+            .filter_map(|directed_edge| {
+                let directed_edge_data = self.directed_edge_data(directed_edge.index());
+                if directed_edge.from() == directed_edge.to()
+                    || directed_edge.from() == directed_edge.to().invert()
+                {
+                    directed_edge_data
+                        .is_forward()
+                        .then_some(directed_edge_data.edge())
+                } else {
+                    Some(directed_edge_data.edge())
+                }
+            })
     }
 
     pub fn node_data(&self, node: NodeIndex<IndexType>) -> &NodeData {
@@ -225,6 +261,8 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
             EdgeView {
                 from,
                 to,
+                forward: bidirected_edge_data.forward,
+                reverse: bidirected_edge_data.reverse,
                 data: &bidirected_edge_data.data,
             }
         } else if forward_to.invert() == reverse_to {
@@ -234,6 +272,8 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
             EdgeView {
                 from,
                 to,
+                forward: bidirected_edge_data.forward,
+                reverse: bidirected_edge_data.reverse,
                 data: &bidirected_edge_data.data,
             }
         } else {
@@ -243,6 +283,8 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
             EdgeView {
                 from,
                 to,
+                forward: bidirected_edge_data.forward,
+                reverse: bidirected_edge_data.reverse,
                 data: &bidirected_edge_data.data,
             }
         }
@@ -250,35 +292,80 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
 
     pub fn directed_edge_data<'this>(
         &'this self,
-        edge: DirectedEdgeIndex<IndexType>,
-    ) -> DirectedEdgeDataView<'this, EdgeData> {
-        let key = &self.edge_data_keys[edge];
-        if let Some(data_index) = Option::<EdgeIndex<IndexType>>::from(key.data_index) {
+        directed_edge: DirectedEdgeIndex<IndexType>,
+    ) -> DirectedEdgeDataView<'this, IndexType, EdgeData> {
+        let key = &self.edge_data_keys[directed_edge];
+        if let Some(edge) = key.data_index.into_option() {
             DirectedEdgeDataView {
-                forward: true,
-                data: &self.edge_data[data_index].data,
+                is_forward: true,
+                edge,
+                data: &self.edge_data[edge].data,
             }
         } else {
             let inverse_key = &self.edge_data_keys[key.inverse];
-            let Some(inverse_data_index) =
-                Option::<EdgeIndex<IndexType>>::from(inverse_key.data_index)
-            else {
+            let Some(edge) = inverse_key.data_index.into_option() else {
                 panic!(
                     "Edge data for edge {:?} and its inverse {:?} are both missing",
-                    edge, key.inverse
+                    directed_edge, key.inverse
                 );
             };
             DirectedEdgeDataView {
-                forward: false,
-                data: &self.edge_data[inverse_data_index].data,
+                is_forward: false,
+                edge,
+                data: &self.edge_data[edge].data,
             }
+        }
+    }
+
+    pub fn directed_edge_into_bidirected(
+        &self,
+        directed_edge: DirectedEdgeIndex<IndexType>,
+    ) -> EdgeIndex<IndexType> {
+        let key = &self.edge_data_keys[directed_edge];
+        if let Some(edge) = key.data_index.into_option() {
+            edge
+        } else {
+            let inverse_key = &self.edge_data_keys[key.inverse];
+            inverse_key
+                .data_index
+                .expect("Edge data for directed edge and its inverse are both missing")
         }
     }
 }
 
-impl<'a, EdgeData> DirectedEdgeDataView<'a, EdgeData> {
+impl<IndexType> DirectedEdge<IndexType> {
+    pub fn from(&self) -> DirectedNodeIndex<IndexType>
+    where
+        IndexType: Copy,
+    {
+        self.from
+    }
+
+    pub fn to(&self) -> DirectedNodeIndex<IndexType>
+    where
+        IndexType: Copy,
+    {
+        self.to
+    }
+
+    pub fn index(&self) -> DirectedEdgeIndex<IndexType>
+    where
+        IndexType: Copy,
+    {
+        self.index
+    }
+}
+
+impl<'a, IndexType, EdgeData> DirectedEdgeDataView<'a, IndexType, EdgeData> {
     pub fn is_forward(&self) -> bool {
-        self.forward
+        self.is_forward
+    }
+
+    pub fn edge(&self) -> EdgeIndex<IndexType>
+    where
+        IndexType: Copy,
+    {
+        self.edge
     }
 
     pub fn data(&self) -> &EdgeData {
@@ -299,6 +386,20 @@ impl<'a, IndexType, EdgeData> EdgeView<'a, IndexType, EdgeData> {
         IndexType: Copy,
     {
         self.to
+    }
+
+    pub fn forward(&self) -> DirectedEdgeIndex<IndexType>
+    where
+        IndexType: Copy,
+    {
+        self.forward
+    }
+
+    pub fn reverse(&self) -> DirectedEdgeIndex<IndexType>
+    where
+        IndexType: Copy,
+    {
+        self.reverse
     }
 
     pub fn data(&self) -> &EdgeData {
