@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     collections::HashMap,
     fmt::Debug,
     io::{BufRead, BufReader, BufWriter, Read, Write},
@@ -16,8 +17,8 @@ use crate::{
 mod tests;
 
 pub trait GfaNodeData {
-    fn name(&self) -> &str;
-    fn sequence(&self) -> &str;
+    fn name(&'_ self) -> Cow<'_, str>;
+    fn sequence(&'_ self) -> Cow<'_, str>;
 }
 
 pub trait GfaEdgeData {
@@ -188,12 +189,12 @@ pub struct PlainGfaEdgeData {
 }
 
 impl GfaNodeData for PlainGfaNodeData {
-    fn name(&self) -> &str {
-        &self.name
+    fn name(&'_ self) -> Cow<'_, str> {
+        Cow::Borrowed(&self.name)
     }
 
-    fn sequence(&self) -> &str {
-        &self.sequence
+    fn sequence(&'_ self) -> Cow<'_, str> {
+        Cow::Borrowed(&self.sequence)
     }
 }
 
