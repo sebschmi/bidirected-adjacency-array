@@ -1,9 +1,20 @@
-use std::fmt::Debug;
+use std::{
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
 use num_traits::PrimInt;
 use optional_numeric_index::implement_generic_index;
 
-pub trait GraphIndexInteger: PrimInt + Debug + From<u8> + TryFrom<usize> + TryInto<usize> {}
+pub trait GraphIndexInteger:
+    PrimInt + Hash + Debug + Display + From<u8> + TryFrom<usize> + TryInto<usize>
+{
+}
+
+impl<T: PrimInt + Hash + Debug + Display + From<u8> + TryFrom<usize> + TryInto<usize>>
+    GraphIndexInteger for T
+{
+}
 
 implement_generic_index!(pub NodeIndex, pub OptionalNodeIndex);
 implement_generic_index!(pub EdgeIndex, pub OptionalEdgeIndex);

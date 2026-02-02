@@ -12,13 +12,16 @@ use crate::{
     index::{EdgeIndex, GraphIndexInteger, NodeIndex},
 };
 
-pub struct GfaNodeData {
-    name: String,
-    sequence: String,
+#[cfg(test)]
+mod tests;
+
+pub trait GfaNodeData {
+    fn name(&self) -> &str;
+    fn sequence(&self) -> &str;
 }
 
-pub struct GfaEdgeData {
-    overlap: u16,
+pub trait GfaEdgeData {
+    fn overlap(&self) -> u16;
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -44,7 +47,7 @@ pub enum GfaReadError {
 
 pub fn read_gfa1<IndexType: GraphIndexInteger>(
     reader: &mut impl Read,
-) -> Result<BidirectedAdjacencyArray<IndexType, GfaNodeData, GfaEdgeData>, GfaReadError> {
+) -> Result<BidirectedAdjacencyArray<IndexType, PlainGfaNodeData, PlainGfaEdgeData>, GfaReadError> {
     let reader = BufReader::new(reader);
     let mut node_name_to_node = HashMap::new();
     let mut nodes = TaggedVec::<NodeIndex<IndexType>, _>::new();
@@ -72,7 +75,7 @@ pub fn read_gfa1<IndexType: GraphIndexInteger>(
                     .ok_or(GfaReadError::MissingSequenceNameInSLine)?
                     .to_string();
                 let sequence = line.get(2).unwrap_or(&"").to_string();
-                let node = nodes.push(GfaNodeData {
+                let node = nodes.push(PlainGfaNodeData {
                     name: name.clone(),
                     sequence,
                 });
@@ -112,7 +115,7 @@ pub fn read_gfa1<IndexType: GraphIndexInteger>(
                     from_forward,
                     to,
                     to_forward,
-                    data: GfaEdgeData { overlap },
+                    data: PlainGfaEdgeData { overlap },
                 });
             }
 
@@ -127,14 +130,10 @@ pub fn read_gfa1<IndexType: GraphIndexInteger>(
     Ok(BidirectedAdjacencyArray::new(nodes, edges))
 }
 
-pub fn write_gfa1<IndexType: GraphIndexInteger, NodeData, EdgeData>(
+pub fn write_gfa1<IndexType: GraphIndexInteger, NodeData: GfaNodeData, EdgeData: GfaEdgeData>(
     graph: &BidirectedAdjacencyArray<IndexType, NodeData, EdgeData>,
     writer: &mut impl Write,
-) -> Result<(), std::io::Error>
-where
-    GfaNodeData: for<'a> From<&'a NodeData>,
-    GfaEdgeData: for<'a> From<&'a EdgeData>,
-{
+) -> Result<(), std::io::Error> {
     let mut writer = BufWriter::new(writer);
 
     // Write header.
@@ -143,23 +142,15 @@ where
     // Write nodes.
     for node in graph.iter_nodes() {
         let node_data = graph.node_data(node);
-        let gfa_node_data: GfaNodeData = node_data.into();
-        writeln!(
-            writer,
-            "S\t{}\t{}",
-            gfa_node_data.name, gfa_node_data.sequence,
-        )?;
+        writeln!(writer, "S\t{}\t{}", node_data.name(), node_data.sequence())?;
     }
 
     // Write edges.
     for edge in graph.iter_edges() {
-        let edge_data = graph.edge_data(edge);
-        let gfa_edge_data: GfaEdgeData = edge_data.data().into();
+        let edge_data = graph.edge(edge);
 
-        let from_node_name =
-            &GfaNodeData::from(graph.node_data(edge_data.from().into_bidirected())).name;
-        let to_node_name =
-            &GfaNodeData::from(graph.node_data(edge_data.to().into_bidirected())).name;
+        let from_node_name = graph.node_data(edge_data.from().into_bidirected()).name();
+        let to_node_name = graph.node_data(edge_data.to().into_bidirected()).name();
 
         // In mathematical notation, traversing an edge from a to b means using edge (a, \hat{b}).
         // But in GFA1, this means using edge (a, b), where both signs are unchanged.
@@ -168,19 +159,46 @@ where
         } else {
             "-"
         };
-        let to_node_sign = if edge_data.to().is_reverse() {
+        let to_node_sign = if edge_data.to().is_forward() {
             "+"
         } else {
             "-"
         };
 
-        let overlap = gfa_edge_data.overlap;
+        let overlap = edge_data.data().overlap();
 
         writeln!(
             writer,
-            "L\t{from_node_name}\t{from_node_sign}\t{to_node_name}\t{to_node_sign}\t{overlap}M"
+            "L\t{from_node_name}\t{from_node_sign}\t{to_node_name}\t{to_node_sign}\t{overlap}M",
         )?;
     }
 
     Ok(())
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct PlainGfaNodeData {
+    name: String,
+    sequence: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct PlainGfaEdgeData {
+    overlap: u16,
+}
+
+impl GfaNodeData for PlainGfaNodeData {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn sequence(&self) -> &str {
+        &self.sequence
+    }
+}
+
+impl GfaEdgeData for PlainGfaEdgeData {
+    fn overlap(&self) -> u16 {
+        self.overlap
+    }
 }

@@ -7,7 +7,11 @@ use crate::index::{
     OptionalEdgeIndex,
 };
 
-pub struct BidirectedAdjacencyArray<IndexType, NodeData, EdgeData> {
+#[cfg(test)]
+mod tests;
+
+#[derive(Debug)]
+pub struct BidirectedAdjacencyArray<IndexType: GraphIndexInteger, NodeData, EdgeData> {
     /// Maps directed nodes to their edge lists.
     ///
     /// Each bidirected node is represented by two consecutive directed nodes.
@@ -43,12 +47,13 @@ pub struct BidirectedAdjacencyArray<IndexType, NodeData, EdgeData> {
     edge_data: TaggedVec<EdgeIndex<IndexType>, BidirectedEdgeData<IndexType, EdgeData>>,
 }
 
-#[derive(Clone, Copy)]
-struct EdgeDataKey<IndexType> {
+#[derive(Debug, Clone, Copy)]
+struct EdgeDataKey<IndexType: GraphIndexInteger> {
     inverse: DirectedEdgeIndex<IndexType>,
     data_index: OptionalEdgeIndex<IndexType>,
 }
 
+#[derive(Debug)]
 struct BidirectedEdgeData<IndexType, EdgeData> {
     forward: DirectedEdgeIndex<IndexType>,
     reverse: DirectedEdgeIndex<IndexType>,
@@ -60,16 +65,19 @@ pub struct DirectedEdgeDataView<'a, EdgeData> {
     data: &'a EdgeData,
 }
 
-pub struct EdgeDataView<'a, IndexType, EdgeData> {
+pub struct EdgeView<'a, IndexType, EdgeData> {
     from: DirectedNodeIndex<IndexType>,
     to: DirectedNodeIndex<IndexType>,
     data: &'a EdgeData,
 }
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct BidirectedEdge<IndexType, EdgeData> {
     pub from: NodeIndex<IndexType>,
+    /// True if this edge originates from the forward side of the `from` node.
     pub from_forward: bool,
     pub to: NodeIndex<IndexType>,
+    /// True if this edge terminates at the forward side of the `to` node.
     pub to_forward: bool,
     pub data: EdgeData,
 }
@@ -88,8 +96,12 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
 
         // Count the number of outgoing edges for each directed node.
         for edge in edges.iter_values() {
-            let from_directed = DirectedNodeIndex::from_bidirected(edge.from, edge.from_forward);
-            node_array[from_directed].increment();
+            let from_directed_forward =
+                DirectedNodeIndex::from_bidirected(edge.from, edge.from_forward);
+            node_array[from_directed_forward].increment();
+            let from_directed_reverse =
+                DirectedNodeIndex::from_bidirected(edge.to, edge.to_forward).invert();
+            node_array[from_directed_reverse].increment();
         }
 
         // Convert counts to edge list limits by computing the prefix sum.
@@ -200,7 +212,7 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
         &self.node_data[node]
     }
 
-    pub fn edge_data(&self, edge: EdgeIndex<IndexType>) -> EdgeDataView<'_, IndexType, EdgeData> {
+    pub fn edge(&self, edge: EdgeIndex<IndexType>) -> EdgeView<'_, IndexType, EdgeData> {
         let bidirected_edge_data = &self.edge_data[edge];
 
         let forward_to = self.edge_array[bidirected_edge_data.forward];
@@ -210,7 +222,7 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
             // ++ or -- self loop case: both directed edges go from node to its reverse.
             let from = forward_to.invert();
             let to = forward_to;
-            EdgeDataView {
+            EdgeView {
                 from,
                 to,
                 data: &bidirected_edge_data.data,
@@ -219,7 +231,7 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
             // +- or -+ self loop case: directed edges are self loops.
             let from = forward_to;
             let to = forward_to;
-            EdgeDataView {
+            EdgeView {
                 from,
                 to,
                 data: &bidirected_edge_data.data,
@@ -228,7 +240,7 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
             // Normal case: directed edges go between two different nodes.
             let from = reverse_to.invert();
             let to = forward_to;
-            EdgeDataView {
+            EdgeView {
                 from,
                 to,
                 data: &bidirected_edge_data.data,
@@ -274,7 +286,7 @@ impl<'a, EdgeData> DirectedEdgeDataView<'a, EdgeData> {
     }
 }
 
-impl<'a, IndexType, EdgeData> EdgeDataView<'a, IndexType, EdgeData> {
+impl<'a, IndexType, EdgeData> EdgeView<'a, IndexType, EdgeData> {
     pub fn from(&self) -> DirectedNodeIndex<IndexType>
     where
         IndexType: Copy,
