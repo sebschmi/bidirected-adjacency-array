@@ -62,6 +62,7 @@ fn test_write_read_triangle() {
 #[test]
 fn test_write_read_large() {
     let mut rng = SmallRng::seed_from_u64(0);
+    let dna_characters = Choose::new(&['A', 'C', 'G', 'T']).unwrap();
 
     for _ in 0..1000 {
         let expected_graph = BidirectedAdjacencyArray::<u16, _, _>::generate_random_graph(
@@ -69,9 +70,7 @@ fn test_write_read_large() {
             100,
             |node_index, rng| PlainGfaNodeData {
                 name: format!("node{node_index}"),
-                sequence: Choose::new(&['A', 'C', 'G', 'T'])
-                    .unwrap()
-                    .sample_string(rng, 10),
+                sequence: dna_characters.sample_string(rng, 10),
             },
             |_| PlainGfaEdgeData { overlap: 0 },
             &mut rng,
