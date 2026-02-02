@@ -74,7 +74,7 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
         NodeData: Eq,
         EdgeData: Eq,
     {
-        match self.compare(&other) {
+        match self.compare(other) {
             Ok(()) => { /* All good. */ }
             Err(error @ GraphComparisonError::EdgeEndpointMismatch(edge_index)) => {
                 let expected_edge = self.edge(edge_index);
