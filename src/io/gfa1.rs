@@ -124,7 +124,7 @@ pub fn read_gfa1<IndexType: GraphIndexInteger>(
         is_header_allowed = false;
     }
 
-    todo!()
+    Ok(BidirectedAdjacencyArray::new(nodes, edges))
 }
 
 pub fn write_gfa1<IndexType: GraphIndexInteger, NodeData, EdgeData>(
