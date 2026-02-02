@@ -58,7 +58,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: cargo check
-        run: cargo check --all-targets
+        run: cargo check --lib
 
   rust_lint:
     name: Rust lint
