@@ -2,9 +2,12 @@ use std::iter;
 
 use tagged_vec::TaggedVec;
 
-use crate::index::{
-    DirectedEdgeIndex, DirectedNodeIndex, EdgeIndex, GraphIndexInteger, NodeIndex,
-    OptionalEdgeIndex,
+use crate::{
+    index::{
+        DirectedEdgeIndex, DirectedNodeIndex, EdgeIndex, GraphIndexInteger, NodeIndex,
+        OptionalEdgeIndex,
+    },
+    io::gfa1::PlainGfaEdgeData,
 };
 
 #[cfg(test)]
@@ -404,5 +407,37 @@ impl<'a, IndexType, EdgeData> EdgeView<'a, IndexType, EdgeData> {
 
     pub fn data(&self) -> &EdgeData {
         self.data
+    }
+}
+
+impl<IndexType: GraphIndexInteger, EdgeData> BidirectedEdge<IndexType, EdgeData> {
+    pub fn new(
+        from: DirectedNodeIndex<IndexType>,
+        to: DirectedNodeIndex<IndexType>,
+        data: EdgeData,
+    ) -> Self {
+        Self {
+            from: from.into_bidirected(),
+            from_forward: from.is_forward(),
+            to: to.into_bidirected(),
+            to_forward: to.is_forward(),
+            data,
+        }
+    }
+}
+
+impl<IndexType: GraphIndexInteger> BidirectedEdge<IndexType, PlainGfaEdgeData> {
+    pub fn new_gfa(
+        from: DirectedNodeIndex<IndexType>,
+        to: DirectedNodeIndex<IndexType>,
+        overlap: u16,
+    ) -> Self {
+        Self {
+            from: from.into_bidirected(),
+            from_forward: from.is_forward(),
+            to: to.into_bidirected(),
+            to_forward: to.is_forward(),
+            data: PlainGfaEdgeData::new(overlap),
+        }
     }
 }
