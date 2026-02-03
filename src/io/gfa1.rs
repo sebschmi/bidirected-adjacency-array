@@ -188,6 +188,15 @@ pub struct PlainGfaEdgeData {
     overlap: u16,
 }
 
+impl PlainGfaNodeData {
+    pub fn new(name: impl ToString, sequence: impl ToString) -> Self {
+        Self {
+            name: name.to_string(),
+            sequence: sequence.to_string(),
+        }
+    }
+}
+
 impl GfaNodeData for PlainGfaNodeData {
     fn name(&'_ self) -> Cow<'_, str> {
         Cow::Borrowed(&self.name)
@@ -195,6 +204,12 @@ impl GfaNodeData for PlainGfaNodeData {
 
     fn sequence(&'_ self) -> Cow<'_, str> {
         Cow::Borrowed(&self.sequence)
+    }
+}
+
+impl PlainGfaEdgeData {
+    pub fn new(overlap: u16) -> Self {
+        Self { overlap }
     }
 }
 
