@@ -22,6 +22,20 @@ implement_generic_index!(pub EdgeIndex, pub OptionalEdgeIndex);
 implement_generic_index!(pub DirectedNodeIndex, pub OptionalDirectedNodeIndex);
 implement_generic_index!(pub DirectedEdgeIndex, pub OptionalDirectedEdgeIndex);
 
+impl<IndexType: GraphIndexInteger> NodeIndex<IndexType> {
+    pub fn into_directed(self, forward: bool) -> DirectedNodeIndex<IndexType> {
+        DirectedNodeIndex::from_bidirected(self, forward)
+    }
+
+    pub fn into_directed_forward(self) -> DirectedNodeIndex<IndexType> {
+        self.into_directed(true)
+    }
+
+    pub fn into_directed_reverse(self) -> DirectedNodeIndex<IndexType> {
+        self.into_directed(false)
+    }
+}
+
 impl<IndexType: GraphIndexInteger> DirectedNodeIndex<IndexType> {
     pub fn from_bidirected(bidirected: NodeIndex<IndexType>, forward: bool) -> Self {
         let base = bidirected.0 * 2u8.into();
