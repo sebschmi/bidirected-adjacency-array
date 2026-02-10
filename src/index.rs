@@ -65,6 +65,11 @@ impl<IndexType: GraphIndexInteger> DirectedNodeIndex<IndexType> {
     pub(crate) fn add(self, other: DirectedNodeIndex<IndexType>) -> DirectedNodeIndex<IndexType> {
         Self::new(self.0 + other.0)
     }
+
+    /// Changes the bidirected node index without affecting the direction.
+    pub fn with_bidirected_node_index(self, bidirected: NodeIndex<IndexType>) -> Self {
+        Self::from_bidirected(bidirected, self.is_forward())
+    }
 }
 
 impl<IndexType: GraphIndexInteger> DirectedEdgeIndex<IndexType> {
