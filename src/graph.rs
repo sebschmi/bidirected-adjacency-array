@@ -97,6 +97,23 @@ pub struct BidirectedEdge<IndexType, EdgeData> {
 impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
     BidirectedAdjacencyArray<IndexType, NodeData, EdgeData>
 {
+    /// Creates a bidirected adjacency array with the given bidirected nodes and edges.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use bidirected_adjacency_array::graph::BidirectedAdjacencyArray;
+    /// use bidirected_adjacency_array::index::{NodeIndex, EdgeIndex};
+    /// use bidirected_adjacency_array::graph::BidirectedEdge;
+    /// use tagged_vec::TaggedVec;
+    ///
+    /// let nodes = TaggedVec::from(vec!['A', 'B', 'C']);
+    /// let edges = TaggedVec::from(vec![
+    ///         BidirectedEdge::new(NodeIndex::from_usize(0).into_directed_forward(), NodeIndex::from_usize(1).into_directed_forward(), 1), // A+ -> B+
+    ///         BidirectedEdge::new(NodeIndex::from_usize(1).into_directed_reverse(), NodeIndex::from_usize(2).into_directed_forward(), 2), // B- -> C+
+    /// ]);
+    /// let graph = BidirectedAdjacencyArray::<u8, _, _>::new(nodes, edges);
+    /// ```
     pub fn new(
         nodes: TaggedVec<NodeIndex<IndexType>, NodeData>,
         edges: TaggedVec<EdgeIndex<IndexType>, BidirectedEdge<IndexType, EdgeData>>,
