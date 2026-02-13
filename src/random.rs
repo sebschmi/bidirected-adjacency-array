@@ -1,6 +1,6 @@
 use std::{collections::HashSet, hash::Hash};
 
-use rand::Rng;
+use rand::{Rng, RngExt};
 use tagged_vec::TaggedVec;
 use thiserror::Error;
 
