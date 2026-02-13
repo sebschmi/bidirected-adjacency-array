@@ -1,5 +1,7 @@
 use std::iter;
 
+use bitvec::vec::BitVec;
+use permutation::Permutation;
 use tagged_vec::TaggedVec;
 
 use crate::{
@@ -205,6 +207,120 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
             node_data: nodes,
             edge_data_keys,
             edge_data,
+        }
+    }
+
+    /// Reorder the edges of the given node according to the given comparator.
+    ///
+    /// The comparator receives two different to-nodes, representing the two edges from the given node to these to-nodes.
+    pub fn reorder_edges(
+        &mut self,
+        node: DirectedNodeIndex<IndexType>,
+        comparator: impl FnMut(
+            DirectedNodeIndex<IndexType>,
+            DirectedNodeIndex<IndexType>,
+        ) -> std::cmp::Ordering,
+    ) {
+        self.reorder_edges_with_buffers(
+            node,
+            comparator,
+            &mut Permutation::one(0),
+            &mut BitVec::new(),
+        );
+    }
+
+    fn reorder_edges_with_buffers(
+        &mut self,
+        node: DirectedNodeIndex<IndexType>,
+        mut comparator: impl FnMut(
+            DirectedNodeIndex<IndexType>,
+            DirectedNodeIndex<IndexType>,
+        ) -> std::cmp::Ordering,
+        permutation: &mut Permutation,
+        bitvec: &mut BitVec,
+    ) {
+        let offset = self.node_array[node].into_usize();
+        let limit = self.node_array[node.add(DirectedNodeIndex::from_usize(1))].into_usize();
+
+        // TODO allow for different length, and construct permutation forwards maybe?
+        permutation.assign_from_sort_by(
+            &self.edge_array.as_untagged_slice()[offset..limit],
+            |a, b| comparator(*a, *b),
+        );
+
+        // Update edge array.
+        permutation
+            .apply_slice_in_place(&mut self.edge_array.as_untagged_mut_slice()[offset..limit]);
+
+        // Update edge data keys.
+        bitvec.clear();
+        bitvec.resize(limit - offset, false);
+        for edge_index in offset..limit {
+            if bitvec[edge_index - offset] {
+                continue;
+            }
+
+            let permuted_edge_index =
+                DirectedEdgeIndex::from_usize(permutation.apply_idx(edge_index - offset) + offset);
+            let edge_index = DirectedEdgeIndex::from_usize(edge_index);
+            let inverse_edge_index = self.edge_data_keys[edge_index].inverse;
+
+            self.edge_data_keys[inverse_edge_index].inverse = permuted_edge_index;
+
+            if (offset..limit).contains(&inverse_edge_index.into_usize()) {
+                // The inverse edge is from the same directed node, so we mark it as permuted, such that we don't permute it twice.
+                // This can happen for self loops.
+                bitvec.set(inverse_edge_index.into_usize() - offset, true);
+
+                let permuted_inverse_edge_index = DirectedEdgeIndex::from_usize(
+                    permutation.apply_idx(inverse_edge_index.into_usize() - offset) + offset,
+                );
+                self.edge_data_keys[edge_index].inverse = permuted_inverse_edge_index;
+            }
+        }
+
+        permutation
+            .apply_slice_in_place(&mut self.edge_data_keys.as_untagged_mut_slice()[offset..limit]);
+
+        // Update edge data.
+        bitvec.clear();
+        bitvec.resize(limit - offset, false);
+        for edge_index in offset..limit {
+            if bitvec[edge_index - offset] {
+                continue;
+            }
+
+            let edge_index = DirectedEdgeIndex::from_usize(edge_index);
+            let inverse_edge_index = self.edge_data_keys[edge_index].inverse;
+
+            let edge_data_key = self.edge_data_keys[edge_index]
+                .data_index
+                .into_option()
+                .xor(
+                    self.edge_data_keys[inverse_edge_index]
+                        .data_index
+                        .into_option(),
+                )
+                .unwrap();
+            let edge_data = &mut self.edge_data[edge_data_key];
+
+            if (offset..limit).contains(&edge_data.forward.into_usize()) {
+                edge_data.forward = DirectedEdgeIndex::from_usize(
+                    permutation.apply_idx(edge_data.forward.into_usize() - offset) + offset,
+                );
+            }
+
+            if (offset..limit).contains(&edge_data.reverse.into_usize()) {
+                edge_data.reverse = DirectedEdgeIndex::from_usize(
+                    permutation.apply_idx(edge_data.reverse.into_usize() - offset) + offset,
+                );
+            }
+
+            if (offset..limit).contains(&inverse_edge_index.into_usize()) {
+                // The inverse edge is from the same directed node, so we mark it as permuted, such that we don't permute its data twice.
+                // This can happen for self loops.
+                bitvec.set(inverse_edge_index.into_usize() - offset, true);
+            }
         }
     }
 

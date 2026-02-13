@@ -15,9 +15,11 @@ random = ["dep:rand"]
 [dependencies]
 num-traits = "0.2.19"
 optional-numeric-index = "0.3.4"
-tagged-vec = "0.4.1"
+tagged-vec = "0.4.3"
 thiserror = "2.0.18"
 log = "0.4.29"
+permutation = "0.4.1"
+bitvec = "1.0.1"
 
 # Generate random graphs
 rand = { version = "0.10.0", optional = true }
