@@ -23,20 +23,20 @@ pub struct BidirectedAdjacencyArray<IndexType: GraphIndexInteger, NodeData, Edge
     /// The forward side is identified by [`DirectedNodeIndex::is_forward`].
     ///
     /// The last element is a sentinel value to simplify edge list iteration.
-    node_array: TaggedVec<DirectedNodeIndex<IndexType>, DirectedEdgeIndex<IndexType>>,
+    pub(crate) node_array: TaggedVec<DirectedNodeIndex<IndexType>, DirectedEdgeIndex<IndexType>>,
 
     /// The edge lists for all directed nodes.
     ///
     /// Each bidirected edge is represented by two reverse-complemental directed edges.
     /// Even ++ and -- self loops are represented by two distinct but same directed edges.
-    edge_array: TaggedVec<DirectedEdgeIndex<IndexType>, DirectedNodeIndex<IndexType>>,
+    pub(crate) edge_array: TaggedVec<DirectedEdgeIndex<IndexType>, DirectedNodeIndex<IndexType>>,
 
     /// Data associated with the nodes.
     ///
     /// Since each bidirected node is represented by two directed nodes,
     /// the data for both directed nodes is stored at the same index.
     /// Hence, the data of a directed node `n` is stored at index `n / 2`.
-    node_data: TaggedVec<NodeIndex<IndexType>, NodeData>,
+    pub(crate) node_data: TaggedVec<NodeIndex<IndexType>, NodeData>,
 
     /// Keys for finding the data associated with the edges.
     ///
@@ -44,22 +44,22 @@ pub struct BidirectedAdjacencyArray<IndexType: GraphIndexInteger, NodeData, Edge
     /// and both directed edges share the same data.
     /// However, we treat one directed edge as the "forward" direction and the other as the "reverse" direction.
     /// We only store the data for the "forward" direction.
-    edge_data_keys: TaggedVec<DirectedEdgeIndex<IndexType>, EdgeDataKey<IndexType>>,
+    pub(crate) edge_data_keys: TaggedVec<DirectedEdgeIndex<IndexType>, EdgeDataKey<IndexType>>,
 
     /// The actual edge data.
     ///
     /// This should be accessed via the `edge_data_keys`.
-    edge_data: TaggedVec<EdgeIndex<IndexType>, BidirectedEdgeData<IndexType, EdgeData>>,
+    pub(crate) edge_data: TaggedVec<EdgeIndex<IndexType>, BidirectedEdgeData<IndexType, EdgeData>>,
 }
 
 #[derive(Debug, Clone, Copy)]
-struct EdgeDataKey<IndexType: GraphIndexInteger> {
+pub(crate) struct EdgeDataKey<IndexType: GraphIndexInteger> {
     inverse: DirectedEdgeIndex<IndexType>,
     data_index: OptionalEdgeIndex<IndexType>,
 }
 
-#[derive(Debug)]
-struct BidirectedEdgeData<IndexType, EdgeData> {
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct BidirectedEdgeData<IndexType, EdgeData> {
     forward: DirectedEdgeIndex<IndexType>,
     reverse: DirectedEdgeIndex<IndexType>,
     data: EdgeData,
