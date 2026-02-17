@@ -2,7 +2,7 @@ use std::{
     borrow::Cow,
     collections::HashMap,
     fmt::Debug,
-    io::{BufRead, BufReader, BufWriter, Read, Write},
+    io::{BufRead, Write},
 };
 
 use log::warn;
@@ -47,9 +47,8 @@ pub enum GfaReadError {
 }
 
 pub fn read_gfa1<IndexType: GraphIndexInteger>(
-    reader: &mut impl Read,
+    reader: impl BufRead,
 ) -> Result<BidirectedAdjacencyArray<IndexType, PlainGfaNodeData, PlainGfaEdgeData>, GfaReadError> {
-    let reader = BufReader::new(reader);
     let mut node_name_to_node = HashMap::new();
     let mut nodes = TaggedVec::<NodeIndex<IndexType>, _>::new();
     let mut edges = TaggedVec::<EdgeIndex<IndexType>, _>::new();
@@ -133,10 +132,8 @@ pub fn read_gfa1<IndexType: GraphIndexInteger>(
 
 pub fn write_gfa1<IndexType: GraphIndexInteger, NodeData: GfaNodeData, EdgeData: GfaEdgeData>(
     graph: &BidirectedAdjacencyArray<IndexType, NodeData, EdgeData>,
-    writer: &mut impl Write,
+    mut writer: impl Write,
 ) -> Result<(), std::io::Error> {
-    let mut writer = BufWriter::new(writer);
-
     // Write header.
     writeln!(writer, "H\tVN:Z:1.0")?;
 
