@@ -15,7 +15,7 @@ use crate::{
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BidirectedAdjacencyArray<IndexType: GraphIndexInteger, NodeData, EdgeData> {
     /// Maps directed nodes to their edge lists.
     ///
@@ -52,13 +52,13 @@ pub struct BidirectedAdjacencyArray<IndexType: GraphIndexInteger, NodeData, Edge
     pub(crate) edge_data: TaggedVec<EdgeIndex<IndexType>, BidirectedEdgeData<IndexType, EdgeData>>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) struct EdgeDataKey<IndexType: GraphIndexInteger> {
     inverse: DirectedEdgeIndex<IndexType>,
     data_index: OptionalEdgeIndex<IndexType>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) struct BidirectedEdgeData<IndexType, EdgeData> {
     forward: DirectedEdgeIndex<IndexType>,
     reverse: DirectedEdgeIndex<IndexType>,

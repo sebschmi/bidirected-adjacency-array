@@ -15,8 +15,8 @@ binary-io = ["tagged-vec/binary-io"]
 
 [dependencies]
 num-traits = "0.2.19"
-optional-numeric-index = "0.3.4"
-tagged-vec = "0.4.4"
+optional-numeric-index = "0.4.0"
+tagged-vec = "0.4.5"
 thiserror = "2.0.18"
 log = "0.4.29"
 permutation = "0.4.1"

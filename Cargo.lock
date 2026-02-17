@@ -184,9 +184,9 @@ dependencies = [
 
 [[package]]
 name = "optional-numeric-index"
-version = "0.3.4"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "493b49784a478a9073688afa9023972a3452639b0e842fcd41b0308b1de78353"
+checksum = "6664336731f2d5b547a7349762c8b3cb2125d7624275f41d23947511974c1760"
 dependencies = [
  "num-traits",
 ]
@@ -315,9 +315,9 @@ dependencies = [
 
 [[package]]
 name = "tagged-vec"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d15b144d518262590998b38eeb962cd0ed9dc24a8de34eef2d0b35990b8bd83e"
+checksum = "45c74f0fd788973d05162cab9e7bd4bcaa7ed306dc1450bf23f0a2a1a303d158"
 
 [[package]]
 name = "tap"
