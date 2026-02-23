@@ -46,6 +46,14 @@ pub enum GfaReadError {
     UnknownGfaNodeSign(String),
 }
 
+struct UnresolvedBidirectedEdge {
+    from: String,
+    from_forward: bool,
+    to: String,
+    to_forward: bool,
+    data: PlainGfaEdgeData,
+}
+
 impl<
     IndexType: GraphIndexInteger,
     NodeData: From<PlainGfaNodeData>,
@@ -93,21 +101,13 @@ impl<
 
                 "L" => {
                     // Parse edge line.
-                    let from_name = line.get(1).ok_or(GfaReadError::LLineTooShort)?;
-                    let from = node_name_to_node
-                        .get(*from_name)
-                        .copied()
-                        .ok_or_else(|| GfaReadError::UnknownNodeName(from_name.to_string()))?;
+                    let from = line.get(1).ok_or(GfaReadError::LLineTooShort)?.to_string();
                     let from_forward = match *line.get(2).ok_or(GfaReadError::LLineTooShort)? {
                         "+" => true,
                         "-" => false,
                         other => return Err(GfaReadError::UnknownGfaNodeSign(other.to_string())),
                     };
-                    let to_name = line.get(3).ok_or(GfaReadError::LLineTooShort)?;
-                    let to = node_name_to_node
-                        .get(*to_name)
-                        .copied()
-                        .ok_or_else(|| GfaReadError::UnknownNodeName(to_name.to_string()))?;
+                    let to = line.get(3).ok_or(GfaReadError::LLineTooShort)?.to_string();
                     let to_forward = match *line.get(4).ok_or(GfaReadError::LLineTooShort)? {
                         "+" => true,
                         "-" => false,
@@ -119,12 +119,12 @@ impl<
                         .parse::<u16>()
                         .unwrap_or(0);
 
-                    edges.push(BidirectedEdge {
+                    edges.push(UnresolvedBidirectedEdge {
                         from,
                         from_forward,
                         to,
                         to_forward,
-                        data: PlainGfaEdgeData { overlap }.into(),
+                        data: PlainGfaEdgeData { overlap },
                     });
                 }
 
@@ -136,7 +136,35 @@ impl<
             is_header_allowed = false;
         }
 
-        Ok(BidirectedAdjacencyArray::new(nodes, edges))
+        let edges = edges
+            .into_values_iter()
+            .map(|edge| {
+                let from = node_name_to_node
+                    .get(&edge.from)
+                    .copied()
+                    .ok_or(GfaReadError::UnknownNodeName(edge.from))?;
+                let to = node_name_to_node
+                    .get(&edge.to)
+                    .copied()
+                    .ok_or(GfaReadError::UnknownNodeName(edge.to))?;
+
+                let from_forward = edge.from_forward;
+                let to_forward = edge.to_forward;
+                let data = EdgeData::from(edge.data);
+
+                Result::<_, GfaReadError>::Ok(BidirectedEdge {
+                    from,
+                    from_forward,
+                    to,
+                    to_forward,
+                    data,
+                })
+            })
+            .collect::<Result<Vec<_>, GfaReadError>>()?;
+
+        // Drop name index before constructing graph to save RAM.
+        drop(node_name_to_node);
+        Ok(BidirectedAdjacencyArray::new(nodes, edges.into()))
     }
 }
 

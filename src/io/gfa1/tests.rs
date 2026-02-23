@@ -1,5 +1,7 @@
+use std::iter;
+
 use rand::{
-    SeedableRng,
+    RngExt, SeedableRng,
     distr::{SampleString, slice::Choose},
     rngs::SmallRng,
 };
@@ -95,4 +97,100 @@ fn test_write_read_large() {
 
         expected_graph.expect_equal(&actual_graph);
     }
+}
+
+#[test]
+fn test_read_random_order_lines() {
+    let mut rng = SmallRng::seed_from_u64(0);
+    let dna_characters = Choose::new(&['A', 'C', 'G', 'T']).unwrap();
+
+    let expected_graph = BidirectedAdjacencyArray::<u16, _, _>::generate_random_graph(
+        4,
+        8,
+        |node_index, rng| PlainGfaNodeData {
+            name: format!("node{node_index}"),
+            sequence: dna_characters.sample_string(rng, 10),
+        },
+        |_| PlainGfaEdgeData { overlap: 0 },
+        &mut rng,
+    )
+    .unwrap();
+
+    let mut buffer = Vec::new();
+    expected_graph.write_gfa1(&mut buffer).unwrap();
+
+    let lines: Vec<_> = str::from_utf8(&buffer).unwrap().lines().collect();
+    let first_l_line_index = lines.iter().position(|line| line.starts_with('L')).unwrap();
+    let mut s_lines: Vec<_> = lines[1..first_l_line_index].iter().copied().rev().collect();
+    let mut l_lines: Vec<_> = lines[first_l_line_index..].iter().copied().rev().collect();
+
+    let mut lines = vec![lines[0]]; // Keep header line at the beginning.
+    while s_lines.len() + l_lines.len() > 0 {
+        if rng.random_ratio(
+            s_lines.len().try_into().unwrap(),
+            (s_lines.len() + l_lines.len()).try_into().unwrap(),
+        ) {
+            lines.push(s_lines.pop().unwrap());
+        } else {
+            lines.push(l_lines.pop().unwrap());
+        }
+    }
+
+    assert!(s_lines.is_empty());
+    assert!(l_lines.is_empty());
+    let first_l_line_index = lines.iter().position(|line| line.starts_with('L')).unwrap();
+    let last_s_line_index = lines
+        .iter()
+        .rposition(|line| line.starts_with('S'))
+        .unwrap();
+    assert!(first_l_line_index < last_s_line_index, "Test setup failure");
+
+    let buffer = lines.join("\n").into_bytes();
+
+    let actual_graph =
+        BidirectedAdjacencyArray::<u16, PlainGfaNodeData, PlainGfaEdgeData>::read_gfa1(
+            &mut buffer.as_slice(),
+        )
+        .unwrap();
+
+    expected_graph.expect_equal(&actual_graph);
+}
+
+#[test]
+fn test_read_inverse_order_lines() {
+    let mut rng = SmallRng::seed_from_u64(0);
+    let dna_characters = Choose::new(&['A', 'C', 'G', 'T']).unwrap();
+
+    let expected_graph = BidirectedAdjacencyArray::<u16, _, _>::generate_random_graph(
+        4,
+        8,
+        |node_index, rng| PlainGfaNodeData {
+            name: format!("node{node_index}"),
+            sequence: dna_characters.sample_string(rng, 10),
+        },
+        |_| PlainGfaEdgeData { overlap: 0 },
+        &mut rng,
+    )
+    .unwrap();
+
+    let mut buffer = Vec::new();
+    expected_graph.write_gfa1(&mut buffer).unwrap();
+
+    let lines: Vec<_> = str::from_utf8(&buffer).unwrap().lines().collect();
+    let first_l_line_index = lines.iter().position(|line| line.starts_with('L')).unwrap();
+    let lines = iter::once(&lines[0]) // Keep header line at the beginning
+        .chain(lines[first_l_line_index..].iter()) // L lines
+        .chain(lines[1..first_l_line_index].iter()) // S lines
+        .copied()
+        .collect::<Vec<_>>();
+
+    let buffer = lines.join("\n").into_bytes();
+
+    let actual_graph =
+        BidirectedAdjacencyArray::<u16, PlainGfaNodeData, PlainGfaEdgeData>::read_gfa1(
+            &mut buffer.as_slice(),
+        )
+        .unwrap();
+
+    expected_graph.expect_equal(&actual_graph);
 }
