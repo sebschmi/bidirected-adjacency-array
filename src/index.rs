@@ -36,6 +36,16 @@ impl<IndexType: GraphIndexInteger> NodeIndex<IndexType> {
     }
 }
 
+impl<IndexType: GraphIndexInteger> EdgeIndex<IndexType> {
+    pub(crate) fn increment(&mut self) {
+        *self = Self::new(self.0 + 1u8.into());
+    }
+
+    pub(crate) fn sub(self, other: EdgeIndex<IndexType>) -> Self {
+        Self::new(self.0 - other.0)
+    }
+}
+
 impl<IndexType: GraphIndexInteger> DirectedNodeIndex<IndexType> {
     pub fn from_bidirected(bidirected: NodeIndex<IndexType>, forward: bool) -> Self {
         let base = bidirected.0 * 2u8.into();
@@ -87,5 +97,9 @@ impl<IndexType: GraphIndexInteger> DirectedEdgeIndex<IndexType> {
 
     pub(crate) fn add(self, other: DirectedEdgeIndex<IndexType>) -> DirectedEdgeIndex<IndexType> {
         Self::new(self.0 + other.0)
+    }
+
+    pub(crate) fn sub(self, other: DirectedEdgeIndex<IndexType>) -> DirectedEdgeIndex<IndexType> {
+        Self::new(self.0 - other.0)
     }
 }

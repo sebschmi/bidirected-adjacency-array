@@ -1,7 +1,8 @@
-use std::iter;
+use std::{collections::BTreeSet, iter};
 
 use bitvec::vec::BitVec;
 use permutation::Permutation;
+use rustc_hash::FxHashSet;
 use tagged_vec::TaggedVec;
 
 use crate::{
@@ -322,6 +323,113 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
                 bitvec.set(inverse_edge_index.into_usize() - offset, true);
             }
         }
+    }
+
+    pub fn remove_multiedges(&mut self) {
+        let mut deleted_edges = BTreeSet::default();
+        let mut existing_edges = FxHashSet::default();
+        let mut directed_edge_decrement = DirectedEdgeIndex::zero();
+
+        for from_node in self
+            .node_array
+            .iter_indices(..DirectedNodeIndex::from_usize(self.node_array.len() - 1))
+        {
+            let edge_offset = self.node_array[from_node];
+            let edge_limit = self.node_array[from_node.add(1.into())];
+
+            // Update node array offset.
+            self.node_array[from_node] = self.node_array[from_node].sub(directed_edge_decrement);
+
+            existing_edges.clear();
+            for directed_edge in self.edge_array.iter_indices(edge_offset..edge_limit) {
+                let to_node = self.edge_array[directed_edge];
+                let decremented_directed_edge = directed_edge.sub(directed_edge_decrement);
+                let inverse_directed_edge = self.edge_data_keys[directed_edge].inverse;
+                let edge = self.edge_data_keys[directed_edge]
+                    .data_index
+                    .into_option()
+                    .or(self.edge_data_keys[inverse_directed_edge]
+                        .data_index
+                        .into_option())
+                    .unwrap();
+
+                if existing_edges.insert(to_node) {
+                    // First occurrence of this directed edge.
+                    // We decrement it only.
+
+                    self.edge_array[decremented_directed_edge] = self.edge_array[directed_edge];
+
+                    self.edge_data_keys[decremented_directed_edge] =
+                        self.edge_data_keys[directed_edge];
+                    self.edge_data_keys[inverse_directed_edge].inverse = decremented_directed_edge;
+
+                    if self.edge_data[edge].forward == directed_edge {
+                        self.edge_data[edge].forward = decremented_directed_edge;
+                    } else if self.edge_data[edge].reverse == directed_edge {
+                        self.edge_data[edge].reverse = decremented_directed_edge;
+                    }
+                } else {
+                    // This directed edge is repeated and should be deleted.
+                    deleted_edges.insert(edge);
+                    directed_edge_decrement.increment();
+                }
+            }
+        }
+
+        // Remove unused entries at the end of the edge array and edge data keys.
+        self.edge_array.splice(
+            DirectedEdgeIndex::from_usize(self.edge_array.len()).sub(directed_edge_decrement)..,
+            iter::empty(),
+        );
+        self.edge_data_keys.splice(
+            DirectedEdgeIndex::from_usize(self.edge_data_keys.len()).sub(directed_edge_decrement)..,
+            iter::empty(),
+        );
+
+        let mut deleted_edges_iter = deleted_edges.iter().copied().peekable();
+        let mut edge_decrement = EdgeIndex::from_usize(0);
+        for edge in self.edge_data.iter_indices(..) {
+            if Some(&edge) == deleted_edges_iter.peek() {
+                // Edge is deleted.
+                deleted_edges_iter.next();
+                edge_decrement.increment();
+            } else {
+                // Edge is not deleted, update indices.
+                let decremented_edge = edge.sub(edge_decrement);
+
+                if self.edge_data_keys[self.edge_data[edge].forward]
+                    .data_index
+                    .is_some()
+                {
+                    self.edge_data_keys[self.edge_data[edge].forward].data_index =
+                        decremented_edge.into();
+                } else if self.edge_data_keys[self.edge_data[edge].reverse]
+                    .data_index
+                    .is_some()
+                {
+                    self.edge_data_keys[self.edge_data[edge].reverse].data_index =
+                        decremented_edge.into();
+                }
+            }
+        }
+
+        // Remove unused entries in the edge data.
+        let mut deleted_edges_iter = deleted_edges.iter().copied().peekable();
+        let mut current_index = EdgeIndex::from_usize(0);
+        self.edge_data.retain(|_| {
+            if Some(&current_index) == deleted_edges_iter.peek() {
+                // Edge is deleted.
+                deleted_edges_iter.next();
+                current_index.increment();
+                false
+            } else {
+                // Edge is not deleted.
+                current_index.increment();
+                true
+            }
+        });
+
+        todo!("TEST THIS");
     }
 
     pub fn node_count(&self) -> usize {
