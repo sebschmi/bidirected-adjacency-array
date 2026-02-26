@@ -315,9 +315,9 @@ dependencies = [
 
 [[package]]
 name = "tagged-vec"
-version = "0.4.5"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45c74f0fd788973d05162cab9e7bd4bcaa7ed306dc1450bf23f0a2a1a303d158"
+checksum = "22fe9493b5b9694af2202b6c55b220ef8b11d616bd84809a69102797bc0615d8"
 
 [[package]]
 name = "tap"

@@ -165,7 +165,7 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
 
         // Now add edges by counting down the edge list limits.
         // Afterwards, the node array will contain the correct edge list offsets.
-        for (edge_index, edge) in edges.into_iter() {
+        for (edge_index, edge) in edges.into_iter(..) {
             let from_directed_forward =
                 DirectedNodeIndex::from_bidirected(edge.from, edge.from_forward);
             let to_directed_forward = DirectedNodeIndex::from_bidirected(edge.to, edge.to_forward);
@@ -333,11 +333,11 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
     }
 
     pub fn iter_nodes(&self) -> impl Iterator<Item = NodeIndex<IndexType>> {
-        self.node_data.iter_indices()
+        self.node_data.iter_indices(..)
     }
 
     pub fn iter_edges(&self) -> impl Iterator<Item = EdgeIndex<IndexType>> {
-        self.edge_data.iter_indices()
+        self.edge_data.iter_indices(..)
     }
 
     pub fn iter_outgoing_edges(
@@ -347,9 +347,7 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
         let start = self.node_array[node];
         let end = self.node_array[node.add(DirectedNodeIndex::from_usize(1))];
         self.edge_array
-            .iter()
-            .take(end.into_usize())
-            .skip(start.into_usize())
+            .iter(start..end)
             .map(move |(edge_index, &to_node)| DirectedEdge {
                 from: node,
                 to: to_node,
