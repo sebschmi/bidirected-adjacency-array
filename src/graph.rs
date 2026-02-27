@@ -13,6 +13,8 @@ use crate::{
     io::gfa1::PlainGfaEdgeData,
 };
 
+static DEBUG_REMOVE_MULTIEDGES: bool = false;
+
 #[cfg(test)]
 mod tests;
 
@@ -325,7 +327,14 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
         }
     }
 
-    pub fn remove_multiedges(&mut self) {
+    /// Removes multiedges between the same pair of directed nodes, keeping only one of them.
+    ///
+    /// **Warning:** This does not check if the edge data of the multiedges is actually the same, and simply keeps one of them.
+    /// It is the caller's responsibility to ensure that this is the case if they want to keep the data consistent.
+    ///
+    /// Returns the indices of the removed edges.
+    /// Note that this method shifts the edge indices, and hence the returned indices now respond to different edges in the graph, or possibly no edge at all.
+    pub fn remove_multiedges(&mut self) -> BTreeSet<EdgeIndex<IndexType>> {
         let mut deleted_edges = BTreeSet::default();
         let mut existing_edges = FxHashSet::default();
         let mut directed_edge_decrement = DirectedEdgeIndex::zero();
@@ -334,6 +343,10 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
             .node_array
             .iter_indices(..DirectedNodeIndex::from_usize(self.node_array.len() - 1))
         {
+            if DEBUG_REMOVE_MULTIEDGES {
+                println!("from_node: {from_node}");
+            }
+
             let edge_offset = self.node_array[from_node];
             let edge_limit = self.node_array[from_node.add(1.into())];
 
@@ -342,16 +355,22 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
 
             existing_edges.clear();
             for directed_edge in self.edge_array.iter_indices(edge_offset..edge_limit) {
+                if DEBUG_REMOVE_MULTIEDGES {
+                    println!("  directed_edge: {directed_edge}");
+                }
+
                 let to_node = self.edge_array[directed_edge];
+                if DEBUG_REMOVE_MULTIEDGES {
+                    println!("  to_node: {to_node}");
+                }
                 let decremented_directed_edge = directed_edge.sub(directed_edge_decrement);
+                if DEBUG_REMOVE_MULTIEDGES {
+                    println!("  decremented_directed_edge: {decremented_directed_edge}");
+                }
                 let inverse_directed_edge = self.edge_data_keys[directed_edge].inverse;
-                let edge = self.edge_data_keys[directed_edge]
-                    .data_index
-                    .into_option()
-                    .or(self.edge_data_keys[inverse_directed_edge]
-                        .data_index
-                        .into_option())
-                    .unwrap();
+                if DEBUG_REMOVE_MULTIEDGES {
+                    println!("  inverse_directed_edge: {inverse_directed_edge}");
+                }
 
                 if existing_edges.insert(to_node) {
                     // First occurrence of this directed edge.
@@ -363,6 +382,17 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
                         self.edge_data_keys[directed_edge];
                     self.edge_data_keys[inverse_directed_edge].inverse = decremented_directed_edge;
 
+                    let edge = self.edge_data_keys[directed_edge]
+                        .data_index
+                        .into_option()
+                        .or(self.edge_data_keys[inverse_directed_edge]
+                            .data_index
+                            .into_option())
+                        .unwrap();
+                    if DEBUG_REMOVE_MULTIEDGES {
+                        println!("  edge: {edge}");
+                    }
+
                     if self.edge_data[edge].forward == directed_edge {
                         self.edge_data[edge].forward = decremented_directed_edge;
                     } else if self.edge_data[edge].reverse == directed_edge {
@@ -370,11 +400,22 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
                     }
                 } else {
                     // This directed edge is repeated and should be deleted.
-                    deleted_edges.insert(edge);
+                    if DEBUG_REMOVE_MULTIEDGES {
+                        println!("  DELETE");
+                    }
+                    if let Some(edge) = self.edge_data_keys[directed_edge].data_index.into_option()
+                    {
+                        if DEBUG_REMOVE_MULTIEDGES {
+                            println!("  edge: {edge}");
+                        }
+                        deleted_edges.insert(edge);
+                    }
                     directed_edge_decrement.increment();
                 }
             }
         }
+
+        let deleted_edges = deleted_edges;
 
         // Remove unused entries at the end of the edge array and edge data keys.
         self.edge_array.splice(
@@ -429,7 +470,7 @@ impl<IndexType: GraphIndexInteger, NodeData, EdgeData>
             }
         });
 
-        todo!("TEST THIS");
+        deleted_edges
     }
 
     pub fn node_count(&self) -> usize {

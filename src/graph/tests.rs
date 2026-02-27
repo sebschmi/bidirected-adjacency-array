@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use tagged_vec::TaggedVec;
 
 use crate::graph::{BidirectedAdjacencyArray, BidirectedEdge};
@@ -83,4 +84,94 @@ fn test_path_construction() {
             .collect::<Vec<_>>(),
         vec![(3.into())]
     );
+}
+
+#[test]
+fn test_remove_multiedges() {
+    let nodes = vec![(), (), (), ()];
+    let edges = vec![
+        BidirectedEdge {
+            from: 0.into(),
+            from_forward: true,
+            to: 1.into(),
+            to_forward: true,
+            data: 1,
+        },
+        BidirectedEdge {
+            from: 1.into(),
+            from_forward: false,
+            to: 0.into(),
+            to_forward: false,
+            data: 2,
+        },
+        BidirectedEdge {
+            from: 1.into(),
+            from_forward: true,
+            to: 2.into(),
+            to_forward: true,
+            data: 3,
+        },
+        BidirectedEdge {
+            from: 1.into(),
+            from_forward: false,
+            to: 2.into(),
+            to_forward: true,
+            data: 4,
+        },
+        BidirectedEdge {
+            from: 2.into(),
+            from_forward: true,
+            to: 3.into(),
+            to_forward: true,
+            data: 5,
+        },
+        BidirectedEdge {
+            from: 2.into(),
+            from_forward: true,
+            to: 3.into(),
+            to_forward: true,
+            data: 6,
+        },
+    ];
+    let mut graph = BidirectedAdjacencyArray::<u8, (), usize>::new(nodes.into(), edges.into());
+
+    assert_eq!(
+        graph
+            .iter_incident_edges(0.into())
+            .map(|edge| *graph.edge(edge).data())
+            .sorted()
+            .collect::<Vec<_>>(),
+        vec![1, 2]
+    );
+    assert_eq!(
+        graph
+            .iter_incident_edges(1.into())
+            .map(|edge| *graph.edge(edge).data())
+            .sorted()
+            .collect::<Vec<_>>(),
+        vec![1, 2, 3, 4]
+    );
+    assert_eq!(
+        graph
+            .iter_incident_edges(2.into())
+            .map(|edge| *graph.edge(edge).data())
+            .sorted()
+            .collect::<Vec<_>>(),
+        vec![3, 4, 5, 6]
+    );
+    assert_eq!(
+        graph
+            .iter_incident_edges(3.into())
+            .map(|edge| *graph.edge(edge).data())
+            .sorted()
+            .collect::<Vec<_>>(),
+        vec![5, 6]
+    );
+
+    let removed = graph.remove_multiedges();
+    assert_eq!(removed.len(), 2, "removed: {removed:?}");
+    assert!(removed.contains(&0.into()) ^ removed.contains(&1.into()));
+    assert!(removed.contains(&4.into()) ^ removed.contains(&5.into()));
+
+    todo!("Ensure that graph has equivalent topology after removing multiedges");
 }
