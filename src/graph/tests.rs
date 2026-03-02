@@ -137,6 +137,79 @@ fn test_remove_multiedges() {
 
     assert_eq!(
         graph
+            .iter_outgoing_edges(0.into())
+            .map(|edge| (edge.to, *graph.directed_edge_data(edge.index).data))
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![(2.into(), 1), (2.into(), 2)],
+    );
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(1.into())
+            .map(|edge| (edge.to, *graph.directed_edge_data(edge.index).data))
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![],
+    );
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(2.into())
+            .map(|edge| (edge.to, *graph.directed_edge_data(edge.index).data))
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![(4.into(), 3),],
+    );
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(3.into())
+            .map(|edge| (edge.to, *graph.directed_edge_data(edge.index).data))
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![(1.into(), 1), (1.into(), 2), (4.into(), 4)],
+    );
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(4.into())
+            .map(|edge| (edge.to, *graph.directed_edge_data(edge.index).data))
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![(6.into(), 5), (6.into(), 6)],
+    );
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(5.into())
+            .map(|edge| (edge.to, *graph.directed_edge_data(edge.index).data))
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![(2.into(), 4), (3.into(), 3)],
+    );
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(6.into())
+            .map(|edge| (edge.to, *graph.directed_edge_data(edge.index).data))
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![],
+    );
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(7.into())
+            .map(|edge| (edge.to, *graph.directed_edge_data(edge.index).data))
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![(5.into(), 5), (5.into(), 6)],
+    );
+
+    assert_eq!(
+        graph
             .iter_incident_edges(0.into())
             .map(|edge| *graph.edge(edge).data())
             .sorted()
@@ -172,6 +245,78 @@ fn test_remove_multiedges() {
     assert_eq!(removed.len(), 2, "removed: {removed:?}");
     assert!(removed.contains(&0.into()) ^ removed.contains(&1.into()));
     assert!(removed.contains(&4.into()) ^ removed.contains(&5.into()));
+    assert_eq!(graph.edge_count(), 4);
 
-    todo!("Ensure that graph has equivalent topology after removing multiedges");
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(0.into())
+            .map(|edge| edge.to)
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![2.into()],
+    );
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(1.into())
+            .map(|edge| edge.to)
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![],
+    );
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(2.into())
+            .map(|edge| edge.to)
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![4.into()],
+    );
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(3.into())
+            .map(|edge| edge.to)
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![1.into(), 4.into()],
+    );
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(4.into())
+            .map(|edge| edge.to)
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![6.into()],
+    );
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(5.into())
+            .map(|edge| edge.to)
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![2.into(), 3.into()],
+    );
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(6.into())
+            .map(|edge| edge.to)
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![],
+    );
+    assert_eq!(
+        graph
+            .iter_outgoing_edges(7.into())
+            .map(|edge| edge.to)
+            .unique()
+            .sorted()
+            .collect_vec(),
+        vec![5.into()],
+    );
 }
