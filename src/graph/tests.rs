@@ -320,3 +320,42 @@ fn test_remove_multiedges() {
         vec![5.into()],
     );
 }
+
+#[test]
+fn test_edges_between() {
+    let nodes = TaggedVec::from(vec![1, 2, 3]);
+    let edges = TaggedVec::from(vec![
+        BidirectedEdge::new(3.into(), 0.into(), 1),
+        BidirectedEdge::new(0.into(), 1.into(), 2),
+        BidirectedEdge::new(4.into(), 4.into(), 3),
+        BidirectedEdge::new(0.into(), 4.into(), 4),
+        BidirectedEdge::new(0.into(), 3.into(), 5),
+    ]);
+
+    let graph = BidirectedAdjacencyArray::<u8, u8, u8>::new(nodes, edges);
+
+    assert_eq!(
+        graph
+            .iter_incident_edges(0.into())
+            .map(|edge| *graph.edge(edge).data())
+            .sorted()
+            .collect_vec(),
+        vec![1, 2, 4, 5],
+    );
+    assert_eq!(
+        graph
+            .iter_incident_edges(1.into())
+            .map(|edge| *graph.edge(edge).data())
+            .sorted()
+            .collect_vec(),
+        vec![1, 5],
+    );
+    assert_eq!(
+        graph
+            .iter_incident_edges(2.into())
+            .map(|edge| *graph.edge(edge).data())
+            .sorted()
+            .collect_vec(),
+        vec![3, 4],
+    );
+}
