@@ -76,7 +76,10 @@ impl<
                 "H" => {
                     if is_header_allowed {
                         if line.get(1) != Some(&"VN:Z:1.0") {
-                            warn!("Unsupported GFA version");
+                            warn!(
+                                "Unsupported GFA version {:?}, expected \"VN:Z:1.0\"",
+                                line.get(1),
+                            );
                         }
                     } else {
                         return Err(GfaReadError::WronglyPositionedHeader);
