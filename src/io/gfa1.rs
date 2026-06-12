@@ -75,10 +75,23 @@ impl<
             match line[0] {
                 "H" => {
                     if is_header_allowed {
-                        if line.get(1) != Some(&"VN:Z:1.0") {
+                        if let Some(&version) = line.get(1) {
+                            if version.starts_with("VN:Z:") {
+                                let version = version.trim_start_matches("VN:Z:");
+                                if version != "1.0" {
+                                    warn!(
+                                        "Unsupported GFA version {version:?}, expected \"1.0\". Attempting to parse anyway, but this may lead to errors or a wrong graph.",
+                                    );
+                                }
+                            } else {
+                                warn!(
+                                    "GFA header line has unrecognized version information, expected \"VN:Z:1.0\", but got \"{}\"",
+                                    version
+                                );
+                            }
+                        } else {
                             warn!(
-                                "Unsupported GFA version {:?}, expected \"VN:Z:1.0\"",
-                                line.get(1),
+                                "GFA header line is missing version information, expected \"VN:Z:1.0\""
                             );
                         }
                     } else {
