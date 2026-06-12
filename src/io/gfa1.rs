@@ -1,6 +1,6 @@
 use std::{
     borrow::Cow,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt::Debug,
     io::{BufRead, Write},
 };
@@ -67,6 +67,7 @@ impl<
         let mut nodes = TaggedVec::<NodeIndex<IndexType>, _>::new();
         let mut edges = TaggedVec::<EdgeIndex<IndexType>, _>::new();
         let mut is_header_allowed = true;
+        let mut unsupported_line_types = HashSet::new();
 
         for line in reader.lines() {
             let line = line?;
@@ -145,7 +146,11 @@ impl<
                 }
 
                 other => {
-                    warn!("Unsupported GFA line type: {}", other);
+                    if unsupported_line_types.insert(other.to_string()) {
+                        warn!(
+                            "Unsupported GFA line type: {other:?}. Subsequent lines of this type will be ignored.",
+                        );
+                    }
                 }
             }
 
